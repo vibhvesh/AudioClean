@@ -38,6 +38,12 @@ label{display:block;margin-top:10px}#status{white-space:pre-wrap;color:#ffd08a}
 <form id="f"><input type="file" id="audio" accept="audio/*" required>
 <label>Noise type / annotation</label><select id="tag"><option>General background noise</option><option>Static / hiss</option><option>Wind / rumble</option><option>Clicks / spikes</option><option>Traffic / engine</option><option>Distortion / clipping</option><option>Overlapping voices</option><option>Important speech - preserve</option></select>
 <br><button>Enhance audio</button></form><p id="status"></p></div>
+<div class="panel"><h3>Speaker detection</h3>
+<p>Find who speaks when, including overlapping speech. This labels speaker turns; it does not yet split voices into separate audio files.</p>
+<form id="speakerForm"><input type="file" id="speakerAudio" accept="audio/*" required>
+<label>Minimum speakers</label><select id="minSpeakers"><option>1</option><option>2</option><option>3</option></select>
+<label>Maximum speakers</label><select id="maxSpeakers"><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
+<br><button>Detect speakers</button></form><p id="speakerStatus"></p><div id="speakerResults"></div></div>
 <div class="panel" id="results" hidden><h3>Original</h3><audio id="before" controls></audio><h3>Enhanced</h3><audio id="after" controls></audio><p id="report"></p></div>
 <script>
 const f=document.getElementById('f'),status=document.getElementById('status');
@@ -47,6 +53,21 @@ try{const r=await fetch('/api/v1/enhance',{method:'POST',body:data});const j=awa
 document.getElementById('before').src=j.original_url;document.getElementById('after').src=j.enhanced_url;
 document.getElementById('report').textContent='Job '+j.job_id+' • '+j.sample_rate+' Hz • '+j.duration_seconds+' seconds • '+j.method;
 document.getElementById('results').hidden=false;status.textContent='Complete';}catch(err){status.textContent='Error: '+err.message;}});
+document.getElementById('speakerForm').addEventListener('submit',async e=>{
+e.preventDefault();const status=document.getElementById('speakerStatus'),out=document.getElementById('speakerResults');
+const file=document.getElementById('speakerAudio').files[0];if(!file)return;
+const min=document.getElementById('minSpeakers').value,max=document.getElementById('maxSpeakers').value;
+if(Number(max)<Number(min)){status.textContent='Maximum speakers must be at least the minimum.';return;}
+const data=new FormData();data.append('file',file);data.append('min_speakers',min);data.append('max_speakers',max);
+status.textContent='Analysing audio… first run may take longer while the model loads.';out.innerHTML='';
+try{const r=await fetch('/api/v1/speakers/detect',{method:'POST',body:data});const j=await r.json();if(!r.ok)throw new Error(j.detail||'Detection failed');
+status.textContent='Found '+j.speaker_count+' speaker(s). '+j.overlaps.length+' overlapping intervals.';
+let html='<audio controls src="'+j.audio_url+'"></audio><h4>Speaker timeline</h4>';
+for(const s of j.speakers){const seg=j.segments.filter(x=>x.speaker===s);html+='<div style="border-top:1px solid #40515f;padding:10px 0"><b>'+s+'</b> — '+seg.length+' turns';for(const t of seg){html+='<div>'+t.start.toFixed(2)+'s – '+t.end.toFixed(2)+'s</div>';}html+='</div>';}
+if(j.overlaps.length){html+='<h4>Overlapping speech</h4>';for(const o of j.overlaps){html+='<div>'+o.start.toFixed(2)+'s – '+o.end.toFixed(2)+'s: '+o.speakers.join(' + ')+'</div>';}}
+html+='<p><small>'+j.note+'</small></p>';out.innerHTML=html;
+}catch(err){status.textContent='Error: '+err.message;}
+});
 </script></body></html>"""
 
 @app.get("/", response_class=HTMLResponse)
