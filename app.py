@@ -9,6 +9,7 @@ from scipy.signal import butter, sosfiltfilt, stft, istft
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from speaker_detection import router as speaker_router
 
 BASE = Path(__file__).resolve().parent
 DATA = Path("/opt/audioclean/data")
@@ -19,6 +20,7 @@ for folder in (ORIGINALS, CLEANED):
 
 app = FastAPI(title="Canberra AudioClean", version="0.1.0")
 app.mount("/files", StaticFiles(directory=str(DATA)), name="files")
+app.include_router(speaker_router)
 
 PAGE = """<!doctype html>
 <html><head><meta name="viewport" content="width=device-width,initial-scale=1">
