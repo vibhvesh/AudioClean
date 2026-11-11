@@ -20,7 +20,7 @@ Open `http://YOUR_SERVER_IP:8095`.
 
 **Important:** v0.1 is a DSP baseline, not an AI speech-enhancement model. GTCRN/RNNoise integration, automatic noise classification, region-level editing and persistent annotation review are future work. The noise tag is currently saved in the API response only; it does not select a different processing model. Overlapping speech and clipped/missing speech are not reconstructed.
 
-## API
+## Speaker detection (optional)\n\nInstall the optional diarization engine separately:\n\n```bash\ncurl -fsSL https://raw.githubusercontent.com/vibhvesh/AudioClean/main/install-speaker-detection.sh | sudo bash\n```\n\nBefore installation, accept the access conditions for [pyannote speaker-diarization-community-1](https://huggingface.co/pyannote/speaker-diarization-community-1) and create a [Hugging Face access token](https://huggingface.co/settings/tokens). The installer prompts for the token without echoing it. The token is stored in `/etc/audioclean/speaker.env`.\n\nThe model labels speaker turns and overlapping intervals; it does **not** separate overlapping voices into independent audio tracks. The optional PyTorch/pyannote stack is large and CPU inference can be slow. Your 2-CPU/4-GB VPS may not have enough memory; consider a separate 8-GB+ worker or GPU machine for regular use.\n\n## API\n\n`POST /api/v1/speakers/detect` as multipart form data: `file`, optional `min_speakers` (default 1) and `max_speakers` (default 5). Returns speaker labels, time segments, and detected overlap intervals.
 
 `GET /health`
 
